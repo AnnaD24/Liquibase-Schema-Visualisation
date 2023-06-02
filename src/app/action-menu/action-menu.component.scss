@@ -1,0 +1,19 @@
+.action-panel {
+  background-color: var(--color-action-menu);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -1px 5px #929292;
+  padding: 10px;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 25%;
+  height: 10px;
+  overflow: hidden;
+  z-index: 1000;
+  transition: height 0.5s ease;
+}
+
+#menu:hover {
+  height: 60px
+}

@@ -1,0 +1,5 @@
+<div class="diagram">
+  <ng-container *ngIf="snapshot$ | async as vm">
+    <app-uml-diagram [tables]="vm.tables" [fkeys]="vm.foreign_keys"></app-uml-diagram>
+  </ng-container>
+</div>

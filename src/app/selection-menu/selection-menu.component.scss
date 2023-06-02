@@ -1,0 +1,23 @@
+.menu-panel {
+  background-color: var(--color-selection-menu);
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 2px 5px #929292;
+  padding: 10px;
+  padding-top: 15px;
+  position: fixed;
+  z-index: 1000;
+  width: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  //height: 10%;
+  transition: height 1s ease;
+}
+
+//#menu:hover {
+//  height: 50%;
+//}
+
+span {
+  transform: scale(0.75);
+}
+

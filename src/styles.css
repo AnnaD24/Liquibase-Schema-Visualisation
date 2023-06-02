@@ -1,1 +1,13 @@
-/* You can add global styles to this file, and also import other style files */
+@import "primeng/resources/themes/lara-light-blue/theme.css";
+@import "primeng/resources/primeng.css"; /* You can add global styles to this file, and also import other style files */
+@import "~bootstrap/dist/css/bootstrap.css";
+
+html, body { padding: 0; margin: 0;}
+
+:root {
+  --color-text: #111111;
+  --color-background: #e7e7e7;
+  --color-splitter: #DCDCDC;
+  --color-selection-menu: #FAFAFA;
+  --color-action-menu: #FAFAFA;
+}
