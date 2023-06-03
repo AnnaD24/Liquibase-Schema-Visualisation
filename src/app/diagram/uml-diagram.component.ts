@@ -1,10 +1,16 @@
-import {AfterViewInit, Component, ElementRef, Input, OnInit, ViewChild} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, inject, Input, OnInit, ViewChild} from '@angular/core';
 import * as go from 'gojs';
 import {TableModel} from "../../model/table.model";
 import {DiagramDataMappingService} from "./diagram-data-mapping.service";
-import {NodeModel} from "../../model/node.model";
+import {Figure, NodeModel} from "../../model/node.model";
 import {LinkModel} from "../../model/link.model";
 import {FKModel} from "../../model/foreign-key.model";
+import {Store} from "@ngrx/store";
+import {filter, Observable} from "rxjs";
+import {SnapshotModel} from "../../model/snapshot.model";
+import {selectDiff, selectEndSnapshot} from "../state/root/root.selectors";
+import {AddedColumnModel} from "../../model/added-column.model";
+import {map, tap} from "rxjs/operators";
 
 const $ = go.GraphObject.make;
 
@@ -25,6 +31,11 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
   nodeDataArray: NodeModel[] = [];
   linkDataArray: LinkModel[] = [];
 
+  store = inject(Store)
+  diff$: Observable<AddedColumnModel[]> = this.store.select(selectDiff)
+
+  myDiagram: go.Diagram | undefined;
+
   constructor(private mappingService: DiagramDataMappingService) {
   }
 
@@ -44,19 +55,45 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
     );
 
   colors = {
-    'red': '#be4b15',
+    'red': '#ff3a3a',
     'green': '#52ce60',
-    'blue': '#6ea5f8',
-    'lightred': '#fd8852',
+    'blue': '#4286ff',
+    'lightred': '#ffbebe',
     'lightblue': '#afd4fe',
     'lightgreen': '#b9e986',
     'pink': '#faadc1',
     'purple': '#d689ff',
     'orange': '#fdb400',
+    'gray': '#676767',
+    'white': '#eeeeee',
   }
 
   ngOnInit(): void {
-    console.log(this.fkeys)
+    this.diff$.pipe(
+      filter(diff => diff.length > 0),
+      tap(diff => this.updateNodes(diff)),
+    ).subscribe()
+    this.mapDataToDiagram()
+  }
+
+  updateNodes(diff?: AddedColumnModel[]) {
+    diff?.forEach(addedCol => {
+      const tableToUpdate = this.myDiagram?.findNodesByExample({name: addedCol.tableName}).first()
+      console.log(this.myDiagram?.findNodesByExample({name: addedCol.tableName}))
+      if (tableToUpdate) {
+        this.myDiagram!.model.commit(m => {
+          m.set(tableToUpdate, "isHighlighted", true);
+          const items = tableToUpdate.data.items.filter((column: any) => column.name === addedCol.colName)
+          console.log(items[0])
+          if(items.length > 0) {
+            m.set(items[0], "color", "green");
+          }
+        }, "flash");
+      }
+    })
+  }
+
+  mapDataToDiagram() {
     this.nodeDataArray = this.mappingService.mapTablesToNodes(this.tables);
     this.linkDataArray = this.mappingService.mapLinks(this.fkeys)
   }
@@ -64,22 +101,10 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
   ngAfterViewInit(): void {
     this.initializeDiagram();
   }
-   mouseEnter(e:any, obj: any) {
-    const shape = obj.findObject("RECTANGLE");
-    shape.fill = "#6DAB80";
-    shape.stroke = "#A6E6A1";
-  };
-
-  mouseLeave(e:any, obj:any) {
-    const shape = obj.findObject("RECTANGLE");
-    // Return the Shape's fill and stroke to the defaults
-    shape.fill = "white";
-    shape.stroke = "#eeeeee";
-  };
 
   initializeDiagram() {
 
-    const myDiagram = $(go.Diagram, this.diagramDiv.nativeElement, {
+    this.myDiagram = $(go.Diagram, this.diagramDiv.nativeElement, {
       allowDelete: false,
       allowCopy: false,
       layout: $(go.LayeredDigraphLayout, {
@@ -93,7 +118,11 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
       "undoManager.isEnabled": true
     });
 
-    myDiagram.model = new go.GraphLinksModel(
+    this.myDiagram.click = e => {
+      e.diagram.commit(d => d.clearHighlighteds(), "no highlighteds");
+    };
+
+    this.myDiagram.model = new go.GraphLinksModel(
       {
         copiesArrays: true,
         copiesArrayObjects: true,
@@ -102,7 +131,7 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
       });
 
 
-    myDiagram.nodeTemplate =
+    this.myDiagram.nodeTemplate =
       $(go.Node, "Auto",  // the whole node panel
         {
           selectionAdorned: true,
@@ -113,8 +142,22 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
           isShadowed: true,
           shadowOffset: new go.Point(3, 3),
           shadowColor: "#C5C1AA",
-          mouseEnter: this.mouseEnter,
-          mouseLeave: this.mouseLeave
+          click: (e, node) => {
+            // highlight all Links and Nodes coming out of a given Node
+            const diagram = node.diagram!
+            const nodeRef = node as go.Node
+
+            diagram.startTransaction("highlight");
+            // remove any previous highlighting
+            diagram.clearHighlighteds();
+            nodeRef.isHighlighted = true;
+            console.log(nodeRef)
+            // // for each Link coming out of the Node, set Link.isHighlighted
+            nodeRef.findLinksConnected().each(l => l.isHighlighted = true);
+            // // for each Node destination for the Node, set Node.isHighlighted
+            nodeRef.findNodesConnected().each(l => l.isHighlighted = true);
+            diagram.commitTransaction("highlight");
+          }
         },
         new go.Binding("location", "location").makeTwoWay(),
         // whenever the PanelExpanderButton changes the visible property of the "LIST" panel,
@@ -122,7 +165,14 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
         new go.Binding("desiredSize", "visible", v => new go.Size(NaN, NaN)).ofObject("LIST"),
         // define the node's outer shape, which will surround the Table
         $(go.Shape, "RoundedRectangle",
-          { fill: 'white', stroke: "#eeeeee", strokeWidth: 2, name: "RECTANGLE" }),
+          { fill: this.colors.white, stroke: this.colors.white, strokeWidth: 2, name: "RECTANGLE" },
+          new go.Binding("stroke", "isHighlighted", h => h ? this.colors.red : this.colors.white)
+            .ofObject(),
+          new go.Binding("strokeWidth", "isHighlighted", h => h ? 6 : 2)
+            .ofObject(),
+          new go.Binding("fill", "isHighlighted", h => h ? this.colors.lightred : this.colors.white)
+            .ofObject()
+        ),
         $(go.Panel, "Table",
           { margin: 8, stretch: go.GraphObject.Fill },
           $(go.RowColumnDefinition, { row: 0, sizing: go.RowColumnDefinition.None }),
@@ -153,7 +203,7 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
       );  // end Node
 
     // define the Link template, representing a relationship
-    myDiagram.linkTemplate =
+    this.myDiagram.linkTemplate =
       $(go.Link,  // the whole link panel
         {
           selectionAdorned: true,
@@ -164,27 +214,12 @@ export class UmlDiagramComponent implements OnInit, AfterViewInit{
           curve: go.Link.JumpOver
         },
         $(go.Shape,  // the link shape
-          { stroke: "#303B45", strokeWidth: 2.5 }),
-        $(go.TextBlock,  // the "from" label
-          {
-            textAlign: "center",
-            font: "bold 14px sans-serif",
-            stroke: "#1967B3",
-            segmentIndex: 0,
-            segmentOffset: new go.Point(NaN, NaN),
-            segmentOrientation: go.Link.OrientUpright
-          },
-          new go.Binding("text", "text")),
-        $(go.TextBlock,  // the "to" label
-          {
-            textAlign: "center",
-            font: "bold 14px sans-serif",
-            stroke: "#1967B3",
-            segmentIndex: -1,
-            segmentOffset: new go.Point(NaN, NaN),
-            segmentOrientation: go.Link.OrientUpright
-          },
-          new go.Binding("text", "toText"))
+          { stroke: this.colors.gray, strokeWidth: 2 },
+          new go.Binding("strokeWidth", "isHighlighted", h => h ? 6 : 2)
+            .ofObject(),
+          new go.Binding("stroke", "isHighlighted", h => h ? this.colors.red : this.colors.gray)
+            .ofObject(),
+        ),
       );
   }
 }

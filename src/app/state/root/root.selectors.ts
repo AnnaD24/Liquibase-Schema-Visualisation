@@ -8,4 +8,6 @@ export const selectRootState = createFeatureSelector<fromRoot.State>(
 export const selectStartSnapshot = createSelector(selectRootState, (param) => (param.startSnapshot))
 export const selectEndSnapshot = createSelector(selectRootState, (param) => (param.endSnapshot))
 
+export const selectDiff = createSelector(selectRootState, (param) => (param.diff))
+
 

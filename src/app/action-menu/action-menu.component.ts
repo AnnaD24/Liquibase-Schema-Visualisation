@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import {Component, inject} from '@angular/core';
+import {DiffActions} from "../state/root/root.actions";
+import {Store} from "@ngrx/store";
 
 @Component({
   selector: 'app-action-menu',
@@ -7,7 +9,9 @@ import { Component } from '@angular/core';
 })
 export class ActionMenuComponent {
 
-  compareSnapshots() {
+  store = inject(Store)
 
+  compareSnapshots() {
+    this.store.dispatch(DiffActions.requestDiff())
   }
 }

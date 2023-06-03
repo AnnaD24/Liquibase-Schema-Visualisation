@@ -1,5 +1,6 @@
 import {createActionGroup, emptyProps, props} from '@ngrx/store';
 import {SnapshotModel} from "../../../model/snapshot.model";
+import {AddedColumnModel} from "../../../model/added-column.model";
 
 export const DateActions = createActionGroup({
   source: 'Date',
@@ -24,3 +25,13 @@ export const EndSnapshotActions = createActionGroup({
     'Load Error': emptyProps(),
   }
 })
+
+export const DiffActions = createActionGroup({
+  source: 'Generate Diff',
+  events: {
+    'Request diff': emptyProps(),
+    'Load Success': props<{addedCols: AddedColumnModel[]}>(),
+    'Load Error': emptyProps(),
+  }
+})
+

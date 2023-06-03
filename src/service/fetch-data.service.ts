@@ -3,6 +3,8 @@ import {EnvironmentService} from "../util/environment.service";
 import {HttpClient} from "@angular/common/http";
 import {SnapshotModel} from "../model/snapshot.model";
 import {Observable} from "rxjs";
+import {AddedColumnModel} from "../model/added-column.model";
+import {DiffResponseModel} from "../model/diff-response.model";
 
 @Injectable({
   providedIn: 'root'
@@ -13,11 +15,15 @@ export class FetchDataService {
     this.url = env.apiUrl;
   }
 
-  getOneSnapshot(date: string): Observable<SnapshotModel> {
-    return this.httpClient.get<SnapshotModel>(this.url + `snapshot?date=${date}`)
+  getStartSnapshot(date: string): Observable<SnapshotModel> {
+    return this.httpClient.get<SnapshotModel>(this.url + `start-snapshot?date=${date}`)
   }
 
-  getDiff() {
-    return this.httpClient.get(this.url + 'diff')
+  getEndSnapshot(date: string): Observable<SnapshotModel> {
+    return this.httpClient.get<SnapshotModel>(this.url + `end-snapshot?date=${date}`)
+  }
+
+  getDiff(): Observable<DiffResponseModel> {
+    return this.httpClient.get<DiffResponseModel>(this.url + 'diff')
   }
 }

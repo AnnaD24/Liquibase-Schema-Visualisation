@@ -8,11 +8,13 @@ export enum Colors {
   pink = '#faadc1',
   purple = '#d689ff',
   orange = '#fdb400',
+  gray = '#e1e1e1',
 }
 
 export enum Figure {
   hexagon = 'Hexagon',
   line = 'LineH',
+  pointer = 'Pointer',
 }
 export interface Column {
   name: string,
